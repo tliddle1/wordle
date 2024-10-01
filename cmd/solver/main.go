@@ -9,8 +9,8 @@ import (
 
 func main() {
 	evaluator := wordle.NewEvaluator()
-	solver := solver.NewThomasSolver()
-	avgNumGuesses, err := evaluator.EvaluateSolver(solver)
+	thomasSolver := solver.NewThomasSolver()
+	avgNumGuesses, err := evaluator.EvaluateSolver(thomasSolver)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

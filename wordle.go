@@ -1,18 +1,16 @@
 package wordle
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math/rand"
-	"slices"
 
 	"github.com/tliddle1/wordle/data"
 )
 
 type Solver interface {
 	Debug() bool
-	Guess(guesses []string, clues []Clue) string
+	Guess(guesses []string, patterns []Pattern) string
 	Reset()
 }
 
@@ -20,24 +18,24 @@ type LetterColor int
 
 var (
 	correct               = [5]LetterColor{Green, Green, Green, Green, Green}
-	blankClue             = [5]LetterColor{unknown, unknown, unknown, unknown, unknown}
+	grayPattern           = [5]LetterColor{Gray, Gray, Gray, Gray, Gray}
 	ErrInvalidGuess       = errors.New("invalid guess")
 	ErrInvalidLengthGuess = errors.New("guess is not 5 letters")
+	ErrLostGame           = errors.New("a game took longer than the maximum number of guesses")
 )
 
 const (
 	wordLength    = 5
-	maxNumGuesses = 3000
+	maxNumGuesses = 6
 )
 
 const (
 	Gray LetterColor = iota
 	Yellow
 	Green
-	unknown
 )
 
-type Clue [5]LetterColor
+type Pattern [5]LetterColor
 
 type Evaluator struct {
 	validTargetSlice []string
@@ -68,95 +66,114 @@ func NewEvaluator() *Evaluator {
 func (this *Evaluator) EvaluateSolver(solver Solver) (float32, error) {
 	debug := solver.Debug()
 	var totalGuesses int
+	i := 0
+	mostGuesses := 0
 	for _, targetString := range this.validTargetSlice {
+		i++
+		if i%50 == 0 {
+			fmt.Printf("%d/%d completed\n", i, len(this.validTargetSlice))
+		}
 		solver.Reset()
 		if debug {
 			fmt.Println("target:", targetString)
 		}
-		numGuesses, err := this.playGame(targetString, solver)
+		numGuesses, err := this.PlayGame(targetString, solver)
 		if err != nil {
 			return -1, err
 		}
+		if numGuesses > maxNumGuesses {
+			return -1, ErrLostGame
+		}
 		totalGuesses += numGuesses
+		mostGuesses = max(numGuesses, mostGuesses)
 		if debug {
 			break
 		}
 	}
+	fmt.Printf("Longest game took %d guesses.\n", mostGuesses)
 	return float32(totalGuesses) / float32(len(this.validTargetSlice)), nil
 }
 
-func (this *Evaluator) playGame(targetString string, solver Solver) (int, error) {
+func (this *Evaluator) PlayGame(target string, solver Solver) (int, error) {
 	debug := solver.Debug()
 	var guesses []string
-	var clues []Clue
+	var patterns []Pattern
 
 	for i := 1; i <= maxNumGuesses; i++ {
-		guessString := solver.Guess(guesses, clues)
-		if len(guessString) != wordLength {
-			return -1, fmt.Errorf("%w: %s", ErrInvalidLengthGuess, guessString)
+		guess := solver.Guess(guesses, patterns)
+		if len(guess) != wordLength {
+			return -1, fmt.Errorf("%w: \"%s\"", ErrInvalidLengthGuess, guess)
 		}
-		if !this.validGuessMap[guessString] && !this.validTargetMap[guessString] {
-			return -1, fmt.Errorf("%w: %s", ErrInvalidGuess, guessString)
+		if !this.validGuessMap[guess] && !this.validTargetMap[guess] {
+			return -1, fmt.Errorf("%w: \"%s\"", ErrInvalidGuess, guess)
 		}
 
-		clue := checkGuess([]byte(targetString), []byte(guessString))
-		if clue == correct {
+		pattern := CheckGuess(target, guess)
+		if pattern == correct {
 			if debug {
-				PrintClue(correct, targetString)
+				PrintPattern(correct, target)
 				fmt.Println(i, "guesses")
 			}
 			return i, nil
 		}
 		if debug {
-			PrintClue(clue, guessString)
+			PrintPattern(pattern, guess)
 		}
-		guesses = append(guesses, guessString)
-		clues = append(clues, clue)
+		guesses = append(guesses, guess)
+		patterns = append(patterns, pattern)
 	}
 	if debug {
-		fmt.Printf("The word was: %s\n", targetString)
+		fmt.Printf("The word was: %s\n", target)
 	}
 	return maxNumGuesses + 1, nil
 }
 
-func checkGuess(target, guess []byte) (clue Clue) {
-	guess = bytes.ToLower(guess)
-	clue = blankClue
-	for i := range 5 {
-		if target[i] == guess[i] {
-			clue[i] = Green
-			target[i] = 0
-		}
-	}
-	for i := range 5 {
-		if clue[i] == unknown && slices.Contains(target, guess[i]) {
-			clue[i] = Yellow
-			idx := bytes.IndexByte(target, guess[i])
-			target[idx] = 0
-		}
-	}
-	for i := range 5 {
-		if clue[i] == unknown {
-			clue[i] = Gray
-		}
-	}
-	return clue
+func CheckGuess(target, guess string) (pattern Pattern) {
+	return checkGuess([]byte(target), []byte(guess))
 }
 
-func PrintClue(clue Clue, guess string) {
+func checkGuess(target, guess []byte) (pattern Pattern) {
+	used := make([]bool, wordLength)
+	pattern = grayPattern
+
+	// First pass: Check for exact matches (Green patterns)
+	for i := 0; i < wordLength; i++ {
+		if target[i] == guess[i] {
+			pattern[i] = Green
+			used[i] = true // Mark this position as used
+		}
+	}
+
+	// Second pass: Check for partial matches (Yellow patterns)
+	for i := 0; i < wordLength; i++ {
+		if pattern[i] == Gray {
+			for j := 0; j < wordLength; j++ {
+				if !used[j] && target[j] == guess[i] {
+					pattern[i] = Yellow
+					used[j] = true // Mark this position as used
+					break
+				}
+			}
+		}
+	}
+
+	return pattern
+}
+
+func PrintPattern(pattern Pattern, guess string) {
 	green := "\033[32m"
 	yellow := "\033[33m"
 	reset := "\033[0m"
 
-	colorizedClue := ""
+	colorizedPattern := ""
 	for i := range 5 {
-		if clue[i] == Green {
-			colorizedClue += green + string(guess[i]) + reset
-		} else if clue[i] == Yellow {
-			colorizedClue += yellow + string(guess[i]) + reset
+		if pattern[i] == Green {
+			colorizedPattern += green + string(guess[i]) + reset
+		} else if pattern[i] == Yellow {
+			colorizedPattern += yellow + string(guess[i]) + reset
 		} else {
-			colorizedClue += string(guess[i])
+			colorizedPattern += string(guess[i])
 		}
 	}
-	fmt.Println(colorizedClue)
+	fmt.Println(colorizedPattern)
 }
