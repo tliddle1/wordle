@@ -68,7 +68,7 @@ func (this *WordleFixture) TestTwoLettersFirstYellow() {
 	this.So(pattern, should.Equal, expectedPattern)
 }
 
-func (this *WordleFixture) Test2() {
+func (this *WordleFixture) TestLotsOfRepeatedLetters() {
 	targetWord := []byte{'f', 'r', 'e', 'e', 'r'}
 	guess := []byte{'e', 'r', 'r', 'o', 'r'}
 	var expectedPattern Pattern
