@@ -10,24 +10,20 @@ import (
 )
 
 type Solver interface {
+	// Debug returns true if the solver is in debug mode
 	Debug() bool
+	// Guess returns the next guess from the solver given the current turn history
 	Guess(turnHistory []Turn) string
+	// Reset will reset the original state of the solver between games
 	Reset()
 }
 
-type Turn struct {
-	Guess   string
-	Pattern Pattern
-}
-
-type LetterColor int
-
 var (
-	CorrectPattern        = [5]LetterColor{Green, Green, Green, Green, Green}
-	grayPattern           = [5]LetterColor{Gray, Gray, Gray, Gray, Gray}
 	ErrInvalidGuess       = errors.New("invalid guess")
 	ErrInvalidLengthGuess = errors.New("guess is not 5 letters")
 	ErrLostGame           = errors.New("a game took longer than the maximum number of guesses")
+	CorrectPattern        = Pattern{Green, Green, Green, Green, Green}
+	grayPattern           = Pattern{Gray, Gray, Gray, Gray, Gray}
 )
 
 const (
@@ -41,7 +37,16 @@ const (
 	Green
 )
 
+type LetterColor int
+
+// Pattern is the clue for a wordle guess
 type Pattern [5]LetterColor
+
+// Turn is a guess with its respective pattern
+type Turn struct {
+	Guess   string  // the word that was guessed
+	Pattern Pattern // the pattern returned by the wordle game for that guess
+}
 
 type Evaluator struct {
 	validTargetSlice []string
@@ -67,6 +72,7 @@ func NewEvaluator() *Evaluator {
 	return &evaluator
 }
 
+// EvaluateSolver will return the average number of guesses that a solver needs to solve all wordles
 func (this *Evaluator) EvaluateSolver(solver Solver) (float32, error) {
 	debug := solver.Debug()
 	var totalGuesses int
@@ -95,6 +101,7 @@ func (this *Evaluator) EvaluateSolver(solver Solver) (float32, error) {
 	return float32(totalGuesses) / float32(len(this.validTargetSlice)), nil
 }
 
+// PlayGame will simulate a single game of wordle
 func (this *Evaluator) PlayGame(target string, solver Solver) (int, error) {
 	debug := solver.Debug()
 	var turnHistory []Turn
@@ -127,6 +134,7 @@ func (this *Evaluator) PlayGame(target string, solver Solver) (int, error) {
 	return MaxNumGuesses, ErrLostGame
 }
 
+// CheckGuess will return the pattern of a guess for a particular target
 func CheckGuess(target, guess string) Pattern {
 	return checkGuess([]byte(target), []byte(guess))
 }
@@ -159,6 +167,7 @@ func checkGuess(target, guess []byte) Pattern {
 	return pattern
 }
 
+// PrintPattern will print the guess using the colors from the pattern for each letter
 func PrintPattern(pattern Pattern, guess string) {
 	green := "\033[32m"
 	yellow := "\033[33m"
