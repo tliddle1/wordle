@@ -6,18 +6,24 @@ import (
 	"math/rand"
 
 	"github.com/tliddle1/wordle/data"
+	"github.com/tliddle1/wordle/pkg/set"
 )
 
 type Solver interface {
 	Debug() bool
-	Guess(guesses []string, patterns []Pattern) string
+	Guess(turnHistory []Turn) string
 	Reset()
+}
+
+type Turn struct {
+	Guess   string
+	Pattern Pattern
 }
 
 type LetterColor int
 
 var (
-	correct               = [5]LetterColor{Green, Green, Green, Green, Green}
+	CorrectPattern        = [5]LetterColor{Green, Green, Green, Green, Green}
 	grayPattern           = [5]LetterColor{Gray, Gray, Gray, Gray, Gray}
 	ErrInvalidGuess       = errors.New("invalid guess")
 	ErrInvalidLengthGuess = errors.New("guess is not 5 letters")
@@ -25,8 +31,8 @@ var (
 )
 
 const (
-	wordLength    = 5
-	maxNumGuesses = 6
+	WordLength    = 5
+	MaxNumGuesses = 6
 )
 
 const (
@@ -39,23 +45,21 @@ type Pattern [5]LetterColor
 
 type Evaluator struct {
 	validTargetSlice []string
-	validTargetMap   map[string]bool
-	validGuessMap    map[string]bool
+	validGuessSet    set.Set[string]
 }
 
 func NewEvaluator() *Evaluator {
 
 	evaluator := Evaluator{
 		validTargetSlice: make([]string, len(data.ValidTargets)),
-		validTargetMap:   map[string]bool{},
-		validGuessMap:    map[string]bool{},
+		validGuessSet:    set.Set[string]{},
 	}
 	copy(evaluator.validTargetSlice, data.ValidTargets)
-	for _, target := range evaluator.validTargetSlice {
-		evaluator.validTargetMap[target] = true
+	for _, guess := range data.ValidTargets {
+		evaluator.validGuessSet.Add(guess)
 	}
 	for _, guess := range data.ValidGuesses {
-		evaluator.validGuessMap[guess] = true
+		evaluator.validGuessSet.Add(guess)
 	}
 	rand.Shuffle(len(evaluator.validTargetSlice), func(i, j int) {
 		evaluator.validTargetSlice[i], evaluator.validTargetSlice[j] = evaluator.validTargetSlice[j], evaluator.validTargetSlice[i]
@@ -81,9 +85,6 @@ func (this *Evaluator) EvaluateSolver(solver Solver) (float32, error) {
 		if err != nil {
 			return -1, err
 		}
-		if numGuesses > maxNumGuesses {
-			return -1, ErrLostGame
-		}
 		totalGuesses += numGuesses
 		mostGuesses = max(numGuesses, mostGuesses)
 		if debug {
@@ -96,22 +97,21 @@ func (this *Evaluator) EvaluateSolver(solver Solver) (float32, error) {
 
 func (this *Evaluator) PlayGame(target string, solver Solver) (int, error) {
 	debug := solver.Debug()
-	var guesses []string
-	var patterns []Pattern
+	var turnHistory []Turn
 
-	for i := 1; i <= maxNumGuesses; i++ {
-		guess := solver.Guess(guesses, patterns)
-		if len(guess) != wordLength {
+	for i := 1; i <= MaxNumGuesses; i++ {
+		guess := solver.Guess(turnHistory)
+		if len(guess) != WordLength {
 			return -1, fmt.Errorf("%w: \"%s\"", ErrInvalidLengthGuess, guess)
 		}
-		if !this.validGuessMap[guess] && !this.validTargetMap[guess] {
+		if !this.validGuessSet.Contains(guess) {
 			return -1, fmt.Errorf("%w: \"%s\"", ErrInvalidGuess, guess)
 		}
 
 		pattern := CheckGuess(target, guess)
-		if pattern == correct {
+		if pattern == CorrectPattern {
 			if debug {
-				PrintPattern(correct, target)
+				PrintPattern(CorrectPattern, target)
 				fmt.Println(i, "guesses")
 			}
 			return i, nil
@@ -119,25 +119,24 @@ func (this *Evaluator) PlayGame(target string, solver Solver) (int, error) {
 		if debug {
 			PrintPattern(pattern, guess)
 		}
-		guesses = append(guesses, guess)
-		patterns = append(patterns, pattern)
+		turnHistory = append(turnHistory, Turn{guess, pattern})
 	}
 	if debug {
 		fmt.Printf("The word was: %s\n", target)
 	}
-	return maxNumGuesses + 1, nil
+	return MaxNumGuesses, ErrLostGame
 }
 
-func CheckGuess(target, guess string) (pattern Pattern) {
+func CheckGuess(target, guess string) Pattern {
 	return checkGuess([]byte(target), []byte(guess))
 }
 
-func checkGuess(target, guess []byte) (pattern Pattern) {
-	used := make([]bool, wordLength)
-	pattern = grayPattern
+func checkGuess(target, guess []byte) Pattern {
+	used := make([]bool, WordLength)
+	pattern := grayPattern
 
 	// First pass: Check for exact matches (Green patterns)
-	for i := 0; i < wordLength; i++ {
+	for i := 0; i < WordLength; i++ {
 		if target[i] == guess[i] {
 			pattern[i] = Green
 			used[i] = true // Mark this position as used
@@ -145,9 +144,9 @@ func checkGuess(target, guess []byte) (pattern Pattern) {
 	}
 
 	// Second pass: Check for partial matches (Yellow patterns)
-	for i := 0; i < wordLength; i++ {
+	for i := 0; i < WordLength; i++ {
 		if pattern[i] == Gray {
-			for j := 0; j < wordLength; j++ {
+			for j := 0; j < WordLength; j++ {
 				if !used[j] && target[j] == guess[i] {
 					pattern[i] = Yellow
 					used[j] = true // Mark this position as used

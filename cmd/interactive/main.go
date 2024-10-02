@@ -3,47 +3,43 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"slices"
-	"strings"
 
 	"github.com/tliddle1/wordle"
 	"github.com/tliddle1/wordle/data"
 )
 
+var validGuesses = append(data.ValidTargets, data.ValidGuesses...)
+
 func main() {
-	evaluator := wordle.NewEvaluator()
-	avgNumGuesses, err := evaluator.EvaluateSolver(interactiveSolver{append(data.ValidTargets, data.ValidGuesses...)})
-	if err != nil {
-		fmt.Println(err.Error())
-		return
+	target := data.ValidTargets[rand.Intn(len(data.ValidTargets))]
+	scanner := bufio.NewScanner(os.Stdin)
+	won := false
+	for range wordle.MaxNumGuesses {
+		guess := askForGuess(scanner)
+		pattern := wordle.CheckGuess(target, guess)
+		wordle.PrintPattern(pattern, guess)
+		if pattern == wordle.CorrectPattern {
+			won = true
+			break
+		}
 	}
-	fmt.Println(avgNumGuesses)
+	if won {
+		fmt.Println("You won!")
+	} else {
+		fmt.Printf("Sorry, you lost. The answer was %s.\n", target)
+	}
 }
 
-type interactiveSolver struct {
-	validGuesses []string
-}
-
-func (this interactiveSolver) Debug() bool {
-	return false
-}
-
-func (this interactiveSolver) Guess(guesses []string, patterns []wordle.Pattern) string {
-	if len(guesses) != len(patterns) {
-		panic("guesses and patterns have different length")
-	}
-	if len(guesses) > 0 {
-		wordle.PrintPattern(patterns[len(patterns)-1], guesses[len(guesses)-1])
-	}
-	reader := bufio.NewReader(os.Stdin)
+func askForGuess(scanner *bufio.Scanner) (guess string) {
 	validGuess := false
-	var guess string
 	for !validGuess {
 		fmt.Print("Enter your guess: ")
-		input, _ := reader.ReadString('\n')
-		guess = strings.TrimSpace(input)
-		if !slices.Contains(this.validGuesses, guess) {
+		scanner.Scan()
+		guess = scanner.Text()
+		if !slices.Contains(validGuesses, guess) {
 			fmt.Println("Invalid guess, try again.")
 		} else {
 			validGuess = true
@@ -51,5 +47,3 @@ func (this interactiveSolver) Guess(guesses []string, patterns []wordle.Pattern)
 	}
 	return guess
 }
-
-func (this interactiveSolver) Reset() {}

@@ -19,7 +19,7 @@ func NewThomasSolver() *ThomasSolver {
 		validGuesses:     make([]string, len(data.ValidGuesses)+len(data.ValidTargets)),
 	}
 	copy(solver.validTargetsLeft, data.ValidTargets)
-	solver.validGuesses = append(data.ValidGuesses, data.ValidTargets...) // TODO check for buggy behavior
+	solver.validGuesses = append(data.ValidGuesses, data.ValidTargets...)
 	return &solver
 }
 
@@ -27,17 +27,15 @@ func (this *ThomasSolver) Debug() bool {
 	return false
 }
 
-func (this *ThomasSolver) Guess(guesses []string, patterns []Pattern) string {
-	if len(patterns) == 0 {
+func (this *ThomasSolver) Guess(turnHistory []Turn) string {
+	if len(turnHistory) == 0 {
 		return "soare"
 	}
-	if len(guesses) > 0 {
-		this.updateValidTargets(patterns[len(patterns)-1], guesses[len(guesses)-1])
-	}
+	this.updateValidTargets(turnHistory[len(turnHistory)-1])
 	if len(this.validTargetsLeft) == 1 {
 		return this.validTargetsLeft[0]
 	}
-	guess := this.minimumExpectedRemainingWords()
+	guess := this.maximizeExpectedInformation()
 	return guess
 }
 
@@ -46,10 +44,12 @@ func (this *ThomasSolver) Reset() {
 	this.validGuesses = data.ValidGuesses
 }
 
-func (this *ThomasSolver) updateValidTargets(pattern Pattern, guess string) {
+// private
+
+func (this *ThomasSolver) updateValidTargets(turn Turn) {
 	var newTargets []string
 	for _, target := range this.validTargetsLeft {
-		if this.isValidTarget(target, guess, pattern) {
+		if this.isValidTarget(target, turn.Guess, turn.Pattern) {
 			newTargets = append(newTargets, target)
 		}
 	}
@@ -60,42 +60,7 @@ func (this *ThomasSolver) isValidTarget(word, guess string, pattern Pattern) boo
 	return CheckGuess(word, guess) == pattern
 }
 
-//func (this *ThomasSolver) minimumExpectedRemainingWordsHardMode() string {
-//	possiblePatterns := make(map[Pattern]int)
-//	minExpectedValue := -1
-//	var minWord string
-//	for _, word := range this.validTargetsLeft {
-//		for _, possibleTarget := range this.validTargetsLeft {
-//			pattern := CheckGuess(possibleTarget, word)
-//			possiblePatterns[pattern]++
-//		}
-//		expectedVal := 0
-//		for _, count := range possiblePatterns {
-//			expectedVal += count * count
-//		}
-//		if expectedVal < minExpectedValue || minExpectedValue == -1 {
-//			minExpectedValue = expectedVal
-//			minWord = word
-//		}
-//	}
-//	for _, word := range this.validGuesses {
-//		for _, possibleTarget := range this.validTargetsLeft {
-//			pattern := CheckGuess(possibleTarget, word)
-//			possiblePatterns[pattern]++
-//		}
-//		expectedVal := 0
-//		for _, count := range possiblePatterns {
-//			expectedVal += count * count
-//		}
-//		if expectedVal < minExpectedValue || minExpectedValue == -1 {
-//			minExpectedValue = expectedVal
-//			minWord = word
-//		}
-//	}
-//	return minWord
-//}
-
-func (this *ThomasSolver) minimumExpectedRemainingWords() string {
+func (this *ThomasSolver) maximizeExpectedInformation() string {
 	wg := sync.WaitGroup{}
 	// Channel for the guess and what the expected value is
 	wordPairChannel := make(chan wordExpectedValuePair, 40)
