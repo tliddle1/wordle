@@ -22,7 +22,7 @@ func (this *WordleFixture) Setup() {
 
 func (this *WordleFixture) TestEvaluatorOneGuess() {
 	avgNumGuesses, err := this.Evaluator.EvaluateSolver(NewDummySolverOneGuess())
-	this.So(err, should.Equal, ErrLostGame)
+	this.So(err, should.Wrap, ErrLostGame)
 	this.So(avgNumGuesses, should.Equal, -1)
 }
 

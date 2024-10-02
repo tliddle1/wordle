@@ -131,7 +131,7 @@ func (this *Evaluator) PlayGame(target string, solver Solver) (int, error) {
 	if debug {
 		fmt.Printf("The word was: %s\n", target)
 	}
-	return MaxNumGuesses, ErrLostGame
+	return MaxNumGuesses, fmt.Errorf("%w: %s", ErrLostGame, target)
 }
 
 // CheckGuess will return the pattern of a guess for a particular target
