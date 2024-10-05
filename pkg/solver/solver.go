@@ -14,12 +14,8 @@ type ThomasSolver struct {
 }
 
 func NewThomasSolver() *ThomasSolver {
-	solver := ThomasSolver{
-		validTargetsLeft: make([]string, len(data.ValidTargets)),
-		validGuesses:     make([]string, len(data.ValidGuesses)+len(data.ValidTargets)),
-	}
-	copy(solver.validTargetsLeft, data.ValidTargets)
-	solver.validGuesses = append(data.ValidGuesses, data.ValidTargets...)
+	solver := ThomasSolver{}
+	solver.setData()
 	return &solver
 }
 
@@ -31,25 +27,30 @@ func (this *ThomasSolver) Guess(turnHistory []Turn) string {
 	if len(turnHistory) == 0 {
 		return "soare"
 	}
-	this.updateValidTargets(turnHistory[len(turnHistory)-1])
-	if len(this.validTargetsLeft) == 1 {
-		return this.validTargetsLeft[0]
-	}
+	this.updateValidTargets(turnHistory)
 	guess := this.maximizeExpectedInformation()
 	return guess
 }
 
 func (this *ThomasSolver) Reset() {
-	this.validTargetsLeft = data.ValidTargets
-	this.validGuesses = data.ValidGuesses
+	this.setData()
 }
 
 // private
 
-func (this *ThomasSolver) updateValidTargets(turn Turn) {
+func (this *ThomasSolver) setData() {
+	this.validTargetsLeft = data.ValidTargets
+	this.validGuesses = append(data.ValidGuesses, data.ValidTargets...)
+}
+
+func (this *ThomasSolver) updateValidTargets(turnHistory []Turn) {
+	if len(turnHistory) == 0 {
+		return
+	}
+	lastTurn := turnHistory[len(turnHistory)-1]
 	var newTargets []string
 	for _, target := range this.validTargetsLeft {
-		if this.isValidTarget(target, turn.Guess, turn.Pattern) {
+		if this.isValidTarget(target, lastTurn.Guess, lastTurn.Pattern) {
 			newTargets = append(newTargets, target)
 		}
 	}
@@ -61,16 +62,14 @@ func (this *ThomasSolver) isValidTarget(word, guess string, pattern Pattern) boo
 }
 
 func (this *ThomasSolver) maximizeExpectedInformation() string {
+	if len(this.validTargetsLeft) <= 2 {
+		return this.validTargetsLeft[0]
+	}
 	wg := sync.WaitGroup{}
 	// Channel for the guess and what the expected value is
-	wordPairChannel := make(chan wordExpectedValuePair, 40)
+	wordPairChannel := make(chan guessExpectedValuePair, 40)
 	wordWithMinExpectedValue := make(chan string)
 	go determineWordWithMaxExpectedInfo(wordPairChannel, wordWithMinExpectedValue)
-	// Try every possible
-	for _, word := range this.validTargetsLeft {
-		wg.Add(1)
-		go this.calculateExpectedInfoAndSendToCompareChannel(wordPairChannel, word, &wg)
-	}
 	for _, word := range this.validGuesses {
 		wg.Add(1)
 		go this.calculateExpectedInfoAndSendToCompareChannel(wordPairChannel, word, &wg)
@@ -80,17 +79,17 @@ func (this *ThomasSolver) maximizeExpectedInformation() string {
 	return <-wordWithMinExpectedValue
 }
 
-func (this *ThomasSolver) calculateExpectedInfoAndSendToCompareChannel(out chan wordExpectedValuePair, word string, wg *sync.WaitGroup) {
+func (this *ThomasSolver) calculateExpectedInfoAndSendToCompareChannel(out chan guessExpectedValuePair, word string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	expectedInfo := this.calculateExpectedInfo(word)
-	out <- wordExpectedValuePair{word, expectedInfo}
+	out <- guessExpectedValuePair{word, expectedInfo}
 }
 
 func (this *ThomasSolver) calculateExpectedInfo(word string) float64 {
 	possiblePatterns := make(map[Pattern]int)
 	for _, possibleTarget := range this.validTargetsLeft {
-		pattern := CheckGuess(possibleTarget, word)
-		possiblePatterns[pattern]++
+		possiblePattern := CheckGuess(possibleTarget, word)
+		possiblePatterns[possiblePattern]++
 	}
 
 	expectedInfo := float64(0)
@@ -101,19 +100,20 @@ func (this *ThomasSolver) calculateExpectedInfo(word string) float64 {
 	return expectedInfo
 }
 
-func determineWordWithMaxExpectedInfo(in chan wordExpectedValuePair, out chan string) {
+func determineWordWithMaxExpectedInfo(in chan guessExpectedValuePair, out chan string) {
 	var maxWord string
 	maxVal := float64(0)
 	for wordValuePair := range in {
-		if wordValuePair.expectedValue > maxVal {
+		// if it's a tie, use the first guess alphabetically
+		if wordValuePair.expectedValue > maxVal || (wordValuePair.expectedValue == maxVal && wordValuePair.guess < maxWord) {
 			maxVal = wordValuePair.expectedValue
-			maxWord = wordValuePair.word
+			maxWord = wordValuePair.guess
 		}
 	}
 	out <- maxWord
 }
 
-type wordExpectedValuePair struct {
-	word          string
+type guessExpectedValuePair struct {
+	guess         string
 	expectedValue float64
 }
