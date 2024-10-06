@@ -14,121 +14,148 @@ func TestSolverFixture(t *testing.T) {
 
 type SolverFixture struct {
 	*gunit.Fixture
-	Solver *ThomasSolver
+	Solver    *ThomasSolver
+	Evaluator *Evaluator
 }
 
 func (this *SolverFixture) Setup() {
 	this.Solver = NewThomasSolver()
+	this.Evaluator = NewEvaluator()
 }
 
 func (this *SolverFixture) Test() {
 	targetWord := "snake"
-	guess := "slain"
-	var pattern Pattern
-	pattern = [5]LetterColor{Green, Gray, Green, Gray, Yellow}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "slain",
+		Pattern: Pattern{Green, Gray, Green, Gray, Yellow},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 
 func (this *SolverFixture) Test2() {
 	targetWord := "stare"
-	guess := "steer"
-	var pattern Pattern
-	pattern = [5]LetterColor{Green, Green, Yellow, Gray, Yellow}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "steer",
+		Pattern: Pattern{Green, Green, Yellow, Gray, Yellow},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 
 func (this *SolverFixture) Test3() {
 	targetWord := "sheen"
-	guess := "siren"
-	var pattern Pattern
-	pattern = [5]LetterColor{Green, Gray, Gray, Green, Green}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "siren",
+		Pattern: Pattern{Green, Gray, Gray, Green, Green},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 
 func (this *SolverFixture) Test4() {
 	targetWord := "sheen"
-	guess := "elate"
-	var pattern Pattern
-	pattern = [5]LetterColor{Yellow, Gray, Gray, Gray, Yellow}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "elate",
+		Pattern: Pattern{Yellow, Gray, Gray, Gray, Yellow},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 
 func (this *SolverFixture) Test5() {
 	targetWord := "messy"
-	guess := "sheen"
-	var pattern Pattern
-	pattern = [5]LetterColor{Yellow, Gray, Yellow, Gray, Gray}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "sheen",
+		Pattern: Pattern{Yellow, Gray, Yellow, Gray, Gray},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 
 func (this *SolverFixture) Test6() {
 	targetWord := "stare"
-	guess := "bleed"
-	var pattern Pattern
-	pattern = [5]LetterColor{Gray, Gray, Yellow, Yellow, Gray}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "bleed",
+		Pattern: Pattern{Gray, Gray, Yellow, Yellow, Gray},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeFalse)
 }
 
 func (this *SolverFixture) Test7() {
 	targetWord := "elate"
-	guess := "bleed"
-	var pattern Pattern
-	pattern = [5]LetterColor{Gray, Green, Yellow, Yellow, Gray}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "bleed",
+		Pattern: Pattern{Gray, Green, Yellow, Yellow, Gray},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 
 func (this *SolverFixture) Test8() {
 	targetWord := "error"
-	guess := "revel"
-	var pattern Pattern
-	pattern = [5]LetterColor{Yellow, Yellow, Gray, Gray, Gray}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "revel",
+		Pattern: Pattern{Yellow, Yellow, Gray, Gray, Gray},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 
 func (this *SolverFixture) Test9() {
 	targetWord := "freer"
-	guess := "error"
-	var pattern Pattern
-	pattern = [5]LetterColor{Yellow, Green, Gray, Gray, Green}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "error",
+		Pattern: Pattern{Yellow, Green, Gray, Gray, Green},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 
 func (this *SolverFixture) Test10() {
 	targetWord := "cacao"
-	guess := "cloot"
-	var pattern Pattern
-	pattern = [5]LetterColor{Green, Gray, Yellow, Gray, Gray}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "cloot",
+		Pattern: Pattern{Green, Gray, Yellow, Gray, Gray},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeTrue)
 }
 func (this *SolverFixture) Test11() {
 	targetWord := "cater"
-	guess := "blech"
-	var pattern Pattern
-	pattern = [5]LetterColor{Gray, Gray, Yellow, Gray, Gray}
-	valid := this.Solver.isValidTarget(targetWord, guess, pattern)
+	turn := Turn{
+		Guess:   "blech",
+		Pattern: Pattern{Gray, Gray, Yellow, Gray, Gray},
+	}
+	valid := this.Solver.isValidTarget(targetWord, turn)
 	this.So(valid, should.BeFalse)
 }
 
 func (this *SolverFixture) TestCalculateExpectedInformationSmart() {
 	word := "smart"
 	expectedInformation := this.Solver.calculateExpectedInfo(word)
-	//this.So(expectedInformation, should.Equal, 5)
-	this.So(expectedInformation, should.BeBetween, 5.2, 5.3)
+	this.So(expectedInformation, should.AlmostEqual, 5.24325852268321)
 }
 
 func (this *SolverFixture) TestCalculateExpectedInformationRaise() {
 	word := "raise"
 	expectedInformation := this.Solver.calculateExpectedInfo(word)
-	//this.So(expectedInformation, should.Equal, 5)
-	this.So(expectedInformation, should.BeBetween, 5.8, 5.9)
+	this.So(expectedInformation, should.AlmostEqual, 5.87830295649317)
+}
+func (this *SolverFixture) TestCalculateExpectedInformationSoare() {
+	word := "soare"
+	expectedInformation := this.Solver.calculateExpectedInfo(word)
+	this.So(expectedInformation, should.AlmostEqual, 5.8852027442927)
+}
+
+func (this *SolverFixture) TestMaximizeExpectedInformationFirstGuess() {
+	firstGuess := this.Solver.maximizeExpectedInformation()
+	this.So(firstGuess, should.Equal, "soare")
+}
+
+func (this *SolverFixture) TestSingleGame() {
+	numGuesses, err := this.Evaluator.PlayGame("angry", this.Solver)
+	this.So(err, should.BeNil)
+	this.So(numGuesses, should.BeLessThanOrEqualTo, MaxNumGuesses)
 }

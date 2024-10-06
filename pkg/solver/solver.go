@@ -9,8 +9,8 @@ import (
 )
 
 type ThomasSolver struct {
-	validTargetsLeft []string
-	validGuesses     []string
+	validTargets []string
+	validGuesses []string
 }
 
 func NewThomasSolver() *ThomasSolver {
@@ -39,7 +39,7 @@ func (this *ThomasSolver) Reset() {
 // private
 
 func (this *ThomasSolver) setData() {
-	this.validTargetsLeft = data.ValidTargets
+	this.validTargets = data.ValidTargets
 	this.validGuesses = append(data.ValidGuesses, data.ValidTargets...)
 }
 
@@ -49,25 +49,25 @@ func (this *ThomasSolver) updateValidTargets(turnHistory []Turn) {
 	}
 	lastTurn := turnHistory[len(turnHistory)-1]
 	var newTargets []string
-	for _, target := range this.validTargetsLeft {
-		if this.isValidTarget(target, lastTurn.Guess, lastTurn.Pattern) {
+	for _, target := range this.validTargets {
+		if this.isValidTarget(target, lastTurn) {
 			newTargets = append(newTargets, target)
 		}
 	}
-	this.validTargetsLeft = newTargets
+	this.validTargets = newTargets
 }
 
-func (this *ThomasSolver) isValidTarget(word, guess string, pattern Pattern) bool {
-	return CheckGuess(word, guess) == pattern
+func (this *ThomasSolver) isValidTarget(word string, turn Turn) bool {
+	return CheckGuess(word, turn.Guess) == turn.Pattern
 }
 
 func (this *ThomasSolver) maximizeExpectedInformation() string {
-	if len(this.validTargetsLeft) <= 2 {
-		return this.validTargetsLeft[0]
+	if len(this.validTargets) <= 2 {
+		return this.validTargets[0]
 	}
 	wg := sync.WaitGroup{}
 	// Channel for the guess and what the expected value is
-	wordPairChannel := make(chan guessExpectedValuePair, 40)
+	wordPairChannel := make(chan guessExpectedValuePair, 2000)
 	wordWithMinExpectedValue := make(chan string)
 	go determineWordWithMaxExpectedInfo(wordPairChannel, wordWithMinExpectedValue)
 	for _, word := range this.validGuesses {
@@ -87,15 +87,15 @@ func (this *ThomasSolver) calculateExpectedInfoAndSendToCompareChannel(out chan 
 
 func (this *ThomasSolver) calculateExpectedInfo(word string) float64 {
 	possiblePatterns := make(map[Pattern]int)
-	for _, possibleTarget := range this.validTargetsLeft {
+	for _, possibleTarget := range this.validTargets {
 		possiblePattern := CheckGuess(possibleTarget, word)
 		possiblePatterns[possiblePattern]++
 	}
 
 	expectedInfo := float64(0)
 	for _, count := range possiblePatterns {
-		probabilityOfPattern := float64(count) / float64(len(this.validTargetsLeft))
-		expectedInfo += probabilityOfPattern * math.Log2(1/probabilityOfPattern)
+		probabilityOfPattern := float64(count) / float64(len(this.validTargets))
+		expectedInfo += -probabilityOfPattern * math.Log2(probabilityOfPattern)
 	}
 	return expectedInfo
 }
