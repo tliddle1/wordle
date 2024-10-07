@@ -23,113 +23,33 @@ func (this *SolverFixture) Setup() {
 	this.Evaluator = NewEvaluator()
 }
 
-func (this *SolverFixture) Test() {
-	targetWord := "snake"
-	turn := Turn{
-		Guess:   "slain",
-		Pattern: Pattern{Green, Gray, Green, Gray, Yellow},
+func TestIsValidTarget(t *testing.T) {
+	solver := NewThomasSolver()
+	tests := []struct {
+		name       string
+		targetWord string
+		turn       Turn
+		expected   bool
+	}{
+		{name: "some green, yellow, and gray", targetWord: "snake", turn: Turn{Guess: "slain", Pattern: Pattern{Green, Gray, Green, Gray, Yellow}}, expected: true},
+		{name: "duplicate letter 1 yellow 1 gray", targetWord: "stare", turn: Turn{Guess: "steer", Pattern: Pattern{Green, Green, Yellow, Gray, Yellow}}, expected: true},
+		{name: "duplicate letter in target", targetWord: "sheen", turn: Turn{Guess: "siren", Pattern: Pattern{Green, Gray, Gray, Green, Green}}, expected: true},
+		{name: "duplicate letter both yellow", targetWord: "sheen", turn: Turn{Guess: "elate", Pattern: Pattern{Yellow, Gray, Gray, Gray, Yellow}}, expected: true},
+		{name: "duplicate letter in target and guess", targetWord: "messy", turn: Turn{Guess: "sheen", Pattern: Pattern{Yellow, Gray, Yellow, Gray, Gray}}, expected: true},
+		{name: "triple letter target", targetWord: "error", turn: Turn{Guess: "revel", Pattern: Pattern{Yellow, Yellow, Gray, Gray, Gray}}, expected: true},
+		{name: "triple letter guess", targetWord: "freer", turn: Turn{Guess: "error", Pattern: Pattern{Yellow, Green, Gray, Gray, Green}}, expected: true},
+		{name: "duplicate letter both yellow false", targetWord: "stare", turn: Turn{Guess: "bleed", Pattern: Pattern{Gray, Gray, Yellow, Yellow, Gray}}, expected: false},
+		{name: "only 1 letter yellow falsea", targetWord: "cater", turn: Turn{Guess: "blech", Pattern: Pattern{Gray, Gray, Yellow, Gray, Gray}}, expected: false},
 	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
 
-func (this *SolverFixture) Test2() {
-	targetWord := "stare"
-	turn := Turn{
-		Guess:   "steer",
-		Pattern: Pattern{Green, Green, Yellow, Gray, Yellow},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := solver.isValidTarget(tt.targetWord, tt.turn)
+			if result != tt.expected {
+				t.Errorf("isValidTarget returned %v when %v was expected for target: %s and guess: %s", result, tt.expected, tt.targetWord, tt.turn.Guess)
+			}
+		})
 	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
-
-func (this *SolverFixture) Test3() {
-	targetWord := "sheen"
-	turn := Turn{
-		Guess:   "siren",
-		Pattern: Pattern{Green, Gray, Gray, Green, Green},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
-
-func (this *SolverFixture) Test4() {
-	targetWord := "sheen"
-	turn := Turn{
-		Guess:   "elate",
-		Pattern: Pattern{Yellow, Gray, Gray, Gray, Yellow},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
-
-func (this *SolverFixture) Test5() {
-	targetWord := "messy"
-	turn := Turn{
-		Guess:   "sheen",
-		Pattern: Pattern{Yellow, Gray, Yellow, Gray, Gray},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
-
-func (this *SolverFixture) Test6() {
-	targetWord := "stare"
-	turn := Turn{
-		Guess:   "bleed",
-		Pattern: Pattern{Gray, Gray, Yellow, Yellow, Gray},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeFalse)
-}
-
-func (this *SolverFixture) Test7() {
-	targetWord := "elate"
-	turn := Turn{
-		Guess:   "bleed",
-		Pattern: Pattern{Gray, Green, Yellow, Yellow, Gray},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
-
-func (this *SolverFixture) Test8() {
-	targetWord := "error"
-	turn := Turn{
-		Guess:   "revel",
-		Pattern: Pattern{Yellow, Yellow, Gray, Gray, Gray},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
-
-func (this *SolverFixture) Test9() {
-	targetWord := "freer"
-	turn := Turn{
-		Guess:   "error",
-		Pattern: Pattern{Yellow, Green, Gray, Gray, Green},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
-
-func (this *SolverFixture) Test10() {
-	targetWord := "cacao"
-	turn := Turn{
-		Guess:   "cloot",
-		Pattern: Pattern{Green, Gray, Yellow, Gray, Gray},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeTrue)
-}
-func (this *SolverFixture) Test11() {
-	targetWord := "cater"
-	turn := Turn{
-		Guess:   "blech",
-		Pattern: Pattern{Gray, Gray, Yellow, Gray, Gray},
-	}
-	valid := this.Solver.isValidTarget(targetWord, turn)
-	this.So(valid, should.BeFalse)
 }
 
 func (this *SolverFixture) TestCalculateExpectedInformationSmart() {

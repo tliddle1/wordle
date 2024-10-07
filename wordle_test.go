@@ -32,35 +32,28 @@ func (this *WordleFixture) NewDummySolverInvalidGuess() {
 	this.So(avgNumGuesses, should.Equal, -1)
 }
 
-// TODO table test
-func (this *WordleFixture) TestGreenGrayAndYellow() {
-	targetWord := "snake"
-	guess := "slain"
-	this.So(CheckGuess(targetWord, guess), should.Equal, Pattern{Green, Gray, Green, Gray, Yellow})
-}
+func TestIsValidTarget(t *testing.T) {
+	tests := []struct {
+		name     string
+		target   string
+		guess    string
+		expected Pattern
+	}{
+		{name: "green, gray, and yellow", target: "snake", guess: "slain", expected: Pattern{Green, Gray, Green, Gray, Yellow}},
+		{name: "double letter in answer", target: "sheen", guess: "siren", expected: Pattern{Green, Gray, Gray, Green, Green}},
+		{name: "two yellows same letter", target: "sheen", guess: "elate", expected: Pattern{Yellow, Gray, Gray, Gray, Yellow}},
+		{name: "two letters one yellow", target: "messy", guess: "sheen", expected: Pattern{Yellow, Gray, Yellow, Gray, Gray}},
+		{name: "lots of repeated letters", target: "freer", guess: "error", expected: Pattern{Yellow, Green, Gray, Gray, Green}},
+	}
 
-func (this *WordleFixture) TestDoubleLetterInAnswer() {
-	targetWord := "sheen"
-	guess := "siren"
-	this.So(CheckGuess(targetWord, guess), should.Equal, Pattern{Green, Gray, Gray, Green, Green})
-}
-
-func (this *WordleFixture) TestTwoYellowsSameLetter() {
-	targetWord := "sheen"
-	guess := "elate"
-	this.So(CheckGuess(targetWord, guess), should.Equal, Pattern{Yellow, Gray, Gray, Gray, Yellow})
-}
-
-func (this *WordleFixture) TestTwoLettersFirstYellow() {
-	targetWord := "messy"
-	guess := "sheen"
-	this.So(CheckGuess(targetWord, guess), should.Equal, Pattern{Yellow, Gray, Yellow, Gray, Gray})
-}
-
-func (this *WordleFixture) TestLotsOfRepeatedLetters() {
-	targetWord := "freer"
-	guess := "error"
-	this.So(CheckGuess(targetWord, guess), should.Equal, Pattern{Yellow, Green, Gray, Gray, Green})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := CheckGuess(tt.target, tt.guess)
+			if result != tt.expected {
+				t.Errorf("isValidTarget returned %v when %v was expected for target: %s and guess: %s", result, tt.expected, tt.target, tt.guess)
+			}
+		})
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
