@@ -67,7 +67,7 @@ func (this *ThomasSolver) maximizeExpectedInformation() string {
 	}
 	wg := sync.WaitGroup{}
 	// Channel for the guess and what the expected value is
-	wordPairChannel := make(chan guessExpectedValuePair, 2000)
+	wordPairChannel := make(chan guessExpectedValuePair, 13000)
 	wordWithMinExpectedValue := make(chan string)
 	go determineWordWithMaxExpectedInfo(wordPairChannel, wordWithMinExpectedValue)
 	for _, word := range this.validGuesses {
@@ -105,12 +105,20 @@ func determineWordWithMaxExpectedInfo(in chan guessExpectedValuePair, out chan s
 	maxVal := float64(0)
 	for wordValuePair := range in {
 		// if it's a tie, use the first guess alphabetically
-		if wordValuePair.expectedValue > maxVal || (wordValuePair.expectedValue == maxVal && wordValuePair.guess < maxWord) {
+		if isBetterWord(wordValuePair, maxVal, maxWord) {
 			maxVal = wordValuePair.expectedValue
 			maxWord = wordValuePair.guess
 		}
 	}
 	out <- maxWord
+}
+
+func isBetterWord(wordValuePair guessExpectedValuePair, maxVal float64, maxWord string) bool {
+	// Almost equal
+	if math.Abs(wordValuePair.expectedValue-maxVal) < .00000001 {
+		return wordValuePair.guess < maxWord
+	}
+	return wordValuePair.expectedValue > maxVal
 }
 
 type guessExpectedValuePair struct {

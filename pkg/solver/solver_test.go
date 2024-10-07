@@ -143,6 +143,7 @@ func (this *SolverFixture) TestCalculateExpectedInformationRaise() {
 	expectedInformation := this.Solver.calculateExpectedInfo(word)
 	this.So(expectedInformation, should.AlmostEqual, 5.87830295649317)
 }
+
 func (this *SolverFixture) TestCalculateExpectedInformationSoare() {
 	word := "soare"
 	expectedInformation := this.Solver.calculateExpectedInfo(word)
