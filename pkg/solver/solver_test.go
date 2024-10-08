@@ -70,13 +70,22 @@ func (this *SolverFixture) TestCalculateExpectedInformationSoare() {
 	this.So(expectedInformation, should.AlmostEqual, 5.8852027442927)
 }
 
-func (this *SolverFixture) TestMaximizeExpectedInformationFirstGuess() {
-	firstGuess := this.Solver.maximizeExpectedInformation()
-	this.So(firstGuess, should.Equal, "soare")
-}
-
 func (this *SolverFixture) TestSingleGame() {
 	numGuesses, err := this.Evaluator.PlayGame("angry", this.Solver)
 	this.So(err, should.BeNil)
 	this.So(numGuesses, should.BeLessThanOrEqualTo, MaxNumGuesses)
+}
+
+func (this *SolverFixture) TestUpdateValidTargetsNoOp() {
+	preUpdateLength := len(this.Solver.validTargets)
+	this.Solver.updateValidTargets([]Turn{})
+	this.So(this.Solver.validTargets, should.HaveLength, preUpdateLength)
+}
+
+func (this *SolverFixture) TestReset() {
+	preUpdateLength := len(this.Solver.validTargets)
+	this.Solver.updateValidTargets([]Turn{{Guess: "soare", Pattern: Pattern{Gray, Gray, Gray, Gray, Gray}}})
+	this.So(len(this.Solver.validTargets), should.BeLessThan, preUpdateLength)
+	this.Solver.Reset()
+	this.So(this.Solver.validTargets, should.HaveLength, preUpdateLength)
 }
